@@ -4,6 +4,7 @@ metadata:
   labels:
     app: redis
   name: redis
+  namespace: default  # Consider specifying namespace
 spec:
   replicas: 1
   selector:
@@ -15,14 +16,33 @@ spec:
         app: redis
     spec:
       containers:
-      - image: redis:alpine
-        name: redis
+      - name: redis
+        image: redis:alpine
+        imagePullPolicy: Always  # Explicit pull policy
         ports:
         - containerPort: 6379
           name: redis
+          protocol: TCP  # Explicit protocol
         volumeMounts:
-        - mountPath: /data
-          name: redis-data
+        - name: redis-data
+          mountPath: /data
+        resources:  # Added resource limits
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:  # Added health checks
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 5
+          periodSeconds: 5
       volumes:
       - name: redis-data
-        emptyDir: {} 
+        emptyDir: {}  # Consider using PVC for persistence
