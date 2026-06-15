@@ -3,20 +3,53 @@ kind: Deployment
 metadata:
   labels:
     app: result
+    version: v1
   name: result
+  namespace: default
 spec:
-  replicas: 1
+  replicas: 2  # Increased for high availability
+  revisionHistoryLimit: 10  # Keep last 10 revisions for rollback
   selector:
     matchLabels:
       app: result
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: result
+        version: v1
     spec:
       containers:
-      - image: dockersamples/examplevotingapp_result
-        name: result
+      - name: result
+        image: dockersamples/examplevotingapp_result:latest
+        imagePullPolicy: Always  # Ensure latest image is pulled
         ports:
         - containerPort: 80
-          name: result
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        env:
+        - name: VOTING_API_URL
+          value: "http://vote-service:5000"
